@@ -15,6 +15,8 @@ Welcome to FG webcategory parser
 		
 Please enter the webfilter profile configuration
 and the program will extract the blocked categories. 
+
+File path needs to be: ../../assets/fg-category-list.txt
 ---------------------------------------------------------
 `
 
