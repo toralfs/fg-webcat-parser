@@ -30,6 +30,9 @@ func main() {
 	bcIDs := findBlockedCategoryIDs(fgWebConf)
 	allBlockedCats := getBlockedCats(cm, bcIDs)
 
+	fmt.Println("---------------------------------------------------------")
+	fmt.Println("The blocked categories are: ")
+	fmt.Println("---------------------------------------------------------")
 	for _, catname := range allBlockedCats {
 		fmt.Println(catname)
 	}
