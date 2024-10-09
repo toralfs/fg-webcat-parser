@@ -36,6 +36,9 @@ func main() {
 	for _, catname := range allBlockedCats {
 		fmt.Println(catname)
 	}
+
+	fmt.Printf("\n Press enter to close the program \n")
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
 }
 
 func getBlockedCats(fgCatMap map[int]string, blockedCats []int) []string {
