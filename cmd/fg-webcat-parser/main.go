@@ -116,7 +116,7 @@ func initMapsFromtxt(txt []string) (map[string]FGGroup, map[int]FGCategory) {
 	mCategory := make(map[int]FGCategory)
 
 	// define regex
-	reGroup := regexp.MustCompile(`^(g\d{2})\s+(.*):$`)
+	reGroup := regexp.MustCompile(`^(g\d{2})\s+(.*)$`)
 	reCategory := regexp.MustCompile(`^(\d*)(\s.*)$`)
 
 	var currentGroup *FGGroup
