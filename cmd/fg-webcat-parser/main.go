@@ -11,30 +11,6 @@ import (
 )
 
 // --------------------------- Consts -----------------------------
-const welcomeMessage string = `
----------------------------------------------------------
-Welcome to FG webcategory parser
-		
-Please enter the webfilter profile configuration
-and the program will extract the blocked categories. 
-
-File path needs to be: ../../assets/fg-category-list.txt
----------------------------------------------------------
-`
-const inputMessage string = "Enter the configuration snippet and press enter."
-const blockedCategoriesMessage string = `
----------------------------------------------------------
-Format is as below:
-Category Group
-    Category Name
-
-The blocked categories are: 
----------------------------------------------------------
-`
-const exitMessage string = `
----------------------------------------------------------
-Press enter to close the program
-`
 const filepath string = "../../assets/fg-category-list.txt"
 
 // --------------------------- Structs -----------------------------
@@ -73,18 +49,63 @@ func main() {
 	}
 
 	// start UI
-	fmt.Print(welcomeMessage)
-	fmt.Println(inputMessage)
+	fmt.Print(`
+------------------------------------------------------------
+Welcome to FG webcategory parser
+		
+Please enter the webfilter profile configuration and
+select the UTM status you want to the categories shown for
 
+File path needs to be: ../../assets/fg-category-list.txt
+------------------------------------------------------------
+`)
+
+	fmt.Println("Enter the configuration snippet and press enter.")
+
+	// Read and parse configuration from user input
 	fgWebConf := readUserInput()
 	bcIDs := parseConfig(fgWebConf, fgCategoryMap, utm)
 
-	fmt.Print(blockedCategoriesMessage)
+	// Read UTM status from user input and show result
+	fmt.Print(`
+------------------------------------------------------------
+Config parsed.
+`)
 
-	printCategoryStatus(fgGroupMap, bcIDs, utm.Allow)
+	// loop the selection until user exits
+	for {
+		fmt.Print(`
+Select which UTM status:
+1 - `, utm.Allow, `
+2 - `, utm.Block, `
+3 - `, utm.Monitor, `
+4 - `, utm.Warning, `
+5 - `, utm.Authenticate, `
+0 - Exit program
+`)
 
-	fmt.Print(exitMessage)
-	bufio.NewReader(os.Stdin).ReadBytes('\n')
+		utmStatus := readUserInputSingle()
+		switch utmStatus {
+		case "1":
+			printCategoryStatus(fgGroupMap, bcIDs, utm.Allow)
+		case "2":
+			printCategoryStatus(fgGroupMap, bcIDs, utm.Block)
+		case "3":
+			printCategoryStatus(fgGroupMap, bcIDs, utm.Monitor)
+		case "4":
+			printCategoryStatus(fgGroupMap, bcIDs, utm.Warning)
+		case "5":
+			printCategoryStatus(fgGroupMap, bcIDs, utm.Authenticate)
+		case "0":
+			fmt.Println("Good bye!")
+			os.Exit(0)
+		default:
+			fmt.Println("Invalid option")
+		}
+
+		fmt.Printf("------------------------------------------------------------\nPress enter to go back to UTM selection.\n")
+		bufio.NewReader(os.Stdin).ReadBytes('\n')
+	}
 }
 
 // --------------------------- Functions -----------------------------
@@ -137,6 +158,16 @@ func initMapsFromtxt(txt []string) (map[string]FGGroup, map[int]FGCategory) {
 }
 
 func printCategoryStatus(mGroup map[string]FGGroup, categories map[int]FGCategory, status string) {
+	fmt.Print(`
+------------------------------------------------------------
+Format is as below:
+Category Group
+	Category Name
+
+The `, status, ` categories are: 
+------------------------------------------------------------
+`)
+
 	// make temp map to group categories by group ID
 	gc := make(map[string][]FGCategory)
 	for _, c := range categories {
@@ -232,6 +263,16 @@ func readUserInput() []string {
 	}
 
 	return lines
+}
+
+func readUserInputSingle() string {
+	s := bufio.NewScanner(os.Stdin)
+	s.Scan()
+	ln := s.Text()
+	if err := s.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return ln
 }
 
 func readTextFile(path string) []string {
