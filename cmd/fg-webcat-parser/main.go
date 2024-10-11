@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -15,7 +16,7 @@ const filepath string = "../../assets/fg-category-list.txt"
 
 // --------------------------- Structs -----------------------------
 type FGGroup struct {
-	ID         string
+	ID         int
 	Name       string
 	Categories []FGCategory
 }
@@ -23,7 +24,7 @@ type FGGroup struct {
 type FGCategory struct {
 	ID    int
 	Name  string
-	GrpID string
+	GrpID int
 	UTM   string
 }
 
@@ -110,9 +111,9 @@ Select which UTM status:
 
 // --------------------------- Functions -----------------------------
 
-func initMapsFromtxt(txt []string) (map[string]FGGroup, map[int]FGCategory) {
+func initMapsFromtxt(txt []string) (map[int]FGGroup, map[int]FGCategory) {
 	// init maps
-	mGroup := make(map[string]FGGroup)
+	mGroup := make(map[int]FGGroup)
 	mCategory := make(map[int]FGCategory)
 
 	// define regex
@@ -130,9 +131,9 @@ func initMapsFromtxt(txt []string) (map[string]FGGroup, map[int]FGCategory) {
 			if currentGroup != nil {
 				mGroup[currentGroup.ID] = *currentGroup
 			}
-
+			i, _ := strconv.Atoi(strings.Split(match[1], "g")[1])
 			currentGroup = &FGGroup{
-				ID:         match[1],
+				ID:         i,
 				Name:       match[2],
 				Categories: []FGCategory{},
 			}
@@ -157,7 +158,7 @@ func initMapsFromtxt(txt []string) (map[string]FGGroup, map[int]FGCategory) {
 	return mGroup, mCategory
 }
 
-func printCategoryStatus(mGroup map[string]FGGroup, categories map[int]FGCategory, status string) {
+func printCategoryStatus(mGroup map[int]FGGroup, categories map[int]FGCategory, status string) {
 	fmt.Print(`
 ------------------------------------------------------------
 Format is as below:
@@ -169,23 +170,32 @@ The `, status, ` categories are:
 `)
 
 	// make temp map to group categories by group ID
-	gc := make(map[string][]FGCategory)
+	gc := make(map[int][]FGCategory)
 	for _, c := range categories {
 		if c.UTM == status {
 			gc[c.GrpID] = append(gc[c.GrpID], c)
 		}
 	}
 
+	// return early if no categories found
 	if len(gc) == 0 {
 		fmt.Println("No categories of this status found")
-	} else {
-		// Print groups and categories
-		for gID, cs := range gc {
-			if g, ok := mGroup[gID]; ok {
-				fmt.Println(g.Name)
-				for _, c := range cs {
-					fmt.Println("    ", c.Name)
-				}
+		return
+	}
+
+	// sort map keys so we can print category groups in order
+	keys := make([]int, 0, len(gc))
+	for k := range gc {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
+
+	// Print groups and categories
+	for _, k := range keys {
+		if g, exist := mGroup[k]; exist {
+			fmt.Println(g.Name)
+			for _, c := range gc[k] {
+				fmt.Println("    ", c.Name)
 			}
 		}
 	}
