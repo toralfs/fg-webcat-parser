@@ -63,8 +63,8 @@ File path needs to be: ../../assets/fg-category-list.txt
 	fmt.Println("Enter the configuration snippet and press enter.")
 
 	// Read and parse configuration from user input
-	fgWebConf := readUserInput()
-	bcIDs := parseConfig(fgWebConf, fgCategoryMap, utm)
+	confWebFilterProfile := readUserInput()
+	confedCategories := parseConfig(confWebFilterProfile, fgCategoryMap, utm)
 
 	// Read UTM status from user input and show result
 	fmt.Print(`
@@ -87,15 +87,15 @@ Select which UTM status:
 		utmStatus := readUserInputSingle()
 		switch utmStatus {
 		case "1":
-			printCategoryStatus(fgGroupMap, bcIDs, utm.Allow)
+			printCategoryStatus(fgGroupMap, confedCategories, utm.Allow)
 		case "2":
-			printCategoryStatus(fgGroupMap, bcIDs, utm.Block)
+			printCategoryStatus(fgGroupMap, confedCategories, utm.Block)
 		case "3":
-			printCategoryStatus(fgGroupMap, bcIDs, utm.Monitor)
+			printCategoryStatus(fgGroupMap, confedCategories, utm.Monitor)
 		case "4":
-			printCategoryStatus(fgGroupMap, bcIDs, utm.Warning)
+			printCategoryStatus(fgGroupMap, confedCategories, utm.Warning)
 		case "5":
-			printCategoryStatus(fgGroupMap, bcIDs, utm.Authenticate)
+			printCategoryStatus(fgGroupMap, confedCategories, utm.Authenticate)
 		case "0":
 			fmt.Println("Good bye!")
 			os.Exit(0)
