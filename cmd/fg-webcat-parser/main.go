@@ -38,119 +38,179 @@ Press enter to close the program
 const filepath string = "../../assets/fg-category-list.txt"
 
 // --------------------------- Structs -----------------------------
-type fgCatGroup struct {
-	GrpID   string
-	GrpName string
-	Cats    map[int]fgCategory
+type FGGroup struct {
+	ID         string
+	Name       string
+	Categories []FGCategory
 }
 
-type fgCategory struct {
-	CatID   int
-	CatName string
+type FGCategory struct {
+	ID    int
+	Name  string
+	GrpID string
+	UTM   string
+}
+
+type UTMAction struct {
+	Block        string
+	Allow        string
+	Monitor      string
+	Warning      string
+	Authenticate string
 }
 
 // --------------------------- Main -----------------------------
 func main() {
+	// init
+	txtContent := readTextFile(filepath)
+	fgGroupMap, fgCategoryMap := initMapsFromtxt(txtContent)
+	utm := UTMAction{
+		Block:        "block",
+		Allow:        "allow",
+		Monitor:      "monitor",
+		Warning:      "warning",
+		Authenticate: "authenticate",
+	}
+
+	// start UI
 	fmt.Print(welcomeMessage)
 	fmt.Println(inputMessage)
-	fgWebConf := readUserInput()
-	fgWebCats := readTextFile(filepath)
 
-	cm := makeCategoryMap(fgWebCats)
-	bcIDs := findBlockedCategoryIDs(fgWebConf)
+	fgWebConf := readUserInput()
+	bcIDs := parseConfig(fgWebConf, fgCategoryMap, utm)
 
 	fmt.Print(blockedCategoriesMessage)
 
-	printBlockedCats(cm, bcIDs)
+	printCategoryStatus(fgGroupMap, bcIDs, utm.Allow)
 
 	fmt.Print(exitMessage)
 	bufio.NewReader(os.Stdin).ReadBytes('\n')
 }
 
 // --------------------------- Functions -----------------------------
-func printBlockedCats(fgCatMap []fgCatGroup, blockedCats []int) {
-	for _, group := range fgCatMap {
-		var cNames []string
-		for _, cat := range blockedCats {
-			n, ok := group.Cats[cat]
-			if ok {
-				cNames = append(cNames, n.CatName)
-			}
-		}
-		if len(cNames) > 0 {
-			fmt.Println(group.GrpName)
-			for _, n := range cNames {
-				fmt.Println("    ", n)
-			}
-		}
-	}
-}
 
-func makeCategoryMap(fgc []string) []fgCatGroup {
-	// Create a regex to match the "gXX Group Name" format
-	groupRegex := regexp.MustCompile(`^(g\d{2})\s+(.*):$`)
+func initMapsFromtxt(txt []string) (map[string]FGGroup, map[int]FGCategory) {
+	// init maps
+	mGroup := make(map[string]FGGroup)
+	mCategory := make(map[int]FGCategory)
 
-	var groups []fgCatGroup
-	var currentGroup *fgCatGroup
+	// define regex
+	reGroup := regexp.MustCompile(`^(g\d{2})\s+(.*):$`)
+	reCategory := regexp.MustCompile(`^(\d*)(\s.*)$`)
 
-	for _, line := range fgc {
-		line = strings.TrimSpace(line)
-		if len(line) == 0 {
+	var currentGroup *FGGroup
+
+	for _, l := range txt {
+		l = strings.TrimSpace(l)
+		if len(l) == 0 {
 			continue
 		}
-
-		if match := groupRegex.FindStringSubmatch(line); match != nil {
-			// If we have an existing group, save it before starting a new one
+		if match := reGroup.FindStringSubmatch(l); match != nil {
 			if currentGroup != nil {
-				groups = append(groups, *currentGroup)
+				mGroup[currentGroup.ID] = *currentGroup
 			}
 
-			// Create a new group with GrpID and GrpName
-			currentGroup = &fgCatGroup{
-				GrpID:   match[1],
-				GrpName: match[2],
-				Cats:    map[int]fgCategory{},
+			currentGroup = &FGGroup{
+				ID:         match[1],
+				Name:       match[2],
+				Categories: []FGCategory{},
 			}
-		} else if currentGroup != nil {
-			fields := strings.Fields(line)
-			catID, _ := strconv.Atoi(fields[0])
-			catName := strings.Join(fields[1:], " ")
-			category := fgCategory{
-				CatID:   catID,
-				CatName: catName,
+		} else if match := reCategory.FindStringSubmatch(l); match != nil {
+			if currentGroup != nil {
+				i, _ := strconv.Atoi(match[1])
+				category := FGCategory{
+					ID:    i,
+					Name:  match[2],
+					GrpID: currentGroup.ID,
+				}
+				mCategory[i] = category
+				currentGroup.Categories = append(currentGroup.Categories, category)
 			}
-
-			currentGroup.Cats[catID] = category
 		}
 	}
-
-	// Append the last group after exiting the loop
+	// Add last group after exiting loop
 	if currentGroup != nil {
-		groups = append(groups, *currentGroup)
+		mGroup[currentGroup.ID] = *currentGroup
 	}
 
-	return groups
+	return mGroup, mCategory
 }
 
-func findBlockedCategoryIDs(fgWebConf []string) []int {
-	var bc []int
-	var catnum int
-	var err error
-	for _, l := range fgWebConf {
-		lTrimmed := strings.TrimSpace(l)
-		if strings.HasPrefix(lTrimmed, "set category") {
-			cat := strings.Fields(lTrimmed)
-			catnum, err = strconv.Atoi(cat[len(cat)-1])
-			if err != nil {
-				fmt.Println("Failed to conver to int", err)
-			}
-		}
-
-		if strings.HasPrefix(lTrimmed, "set action block") {
-			bc = append(bc, catnum)
+func printCategoryStatus(mGroup map[string]FGGroup, categories map[int]FGCategory, status string) {
+	// make temp map to group categories by group ID
+	gc := make(map[string][]FGCategory)
+	for _, c := range categories {
+		if c.UTM == status {
+			gc[c.GrpID] = append(gc[c.GrpID], c)
 		}
 	}
-	return bc
+
+	if len(gc) == 0 {
+		fmt.Println("No categories of this status found")
+	} else {
+		// Print groups and categories
+		for gID, cs := range gc {
+			if g, ok := mGroup[gID]; ok {
+				fmt.Println(g.Name)
+				for _, c := range cs {
+					fmt.Println("    ", c.Name)
+				}
+			}
+		}
+	}
+}
+
+func parseConfig(conf []string, mCategory map[int]FGCategory, utm UTMAction) map[int]FGCategory {
+	var cID int
+	var lastLine string
+	var action string
+	var a bool
+
+	cs := make(map[int]FGCategory)
+
+	// Look through config and find what utm action is set on them
+	for _, l := range conf {
+		l := strings.TrimSpace(l)
+
+		if strings.HasPrefix(l, "set category") {
+			c := strings.Fields(l)
+			cID, _ = strconv.Atoi(c[len(c)-1])
+		} else if strings.HasPrefix(l, "set action") {
+			action = strings.Fields(l)[2]
+			a = true
+		} else if strings.HasPrefix(lastLine, "set category") && (l == "next" || lastLine == "set log disable") {
+			action = utm.Monitor
+			a = true
+		}
+
+		if a {
+			c := FGCategory{
+				ID:    cID,
+				Name:  mCategory[cID].Name,
+				GrpID: mCategory[cID].GrpID,
+				UTM:   action,
+			}
+			cs[cID] = c
+		}
+
+		lastLine = l
+		a = false
+	}
+
+	// find all categories that was not found in config. These are set to "allow"
+	for i, category := range mCategory {
+		if _, ok := cs[i]; !ok {
+			c := FGCategory{
+				ID:    i,
+				Name:  category.Name,
+				GrpID: category.GrpID,
+				UTM:   utm.Allow,
+			}
+			cs[i] = c
+		}
+	}
+
+	return cs
 }
 
 func readUserInput() []string {

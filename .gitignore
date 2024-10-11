@@ -20,5 +20,8 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-#Folder for built executables
+# Folder for built executables
 bin/
+
+# tmp files
+tmp*
