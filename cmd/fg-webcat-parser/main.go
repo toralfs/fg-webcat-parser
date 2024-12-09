@@ -56,8 +56,6 @@ Welcome to FG webcategory parser
 		
 Please enter the webfilter profile configuration and
 select the UTM status you want to the categories shown for
-
-File path needs to be: ../../assets/fg-category-list.txt
 ------------------------------------------------------------
 `)
 
