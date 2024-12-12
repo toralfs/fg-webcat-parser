@@ -12,7 +12,8 @@ import (
 )
 
 // --------------------------- Consts -----------------------------
-const filepath string = "../../assets/fg-category-list.txt"
+const filename string = "fg-category-list.txt"
+const pathEnv string = "GO_ASSETS"
 
 // --------------------------- Structs -----------------------------
 type FGGroup struct {
@@ -39,7 +40,11 @@ type UTMAction struct {
 // --------------------------- Main -----------------------------
 func main() {
 	// init
-	txtContent := readTextFile(filepath)
+	filepath, err := getFilePath()
+	if err != nil {
+		fmt.Println(err)
+	}
+	txtContent := readTextFile(filepath + filename)
 	fgGroupMap, fgCategoryMap := initMapsFromtxt(txtContent)
 	utm := UTMAction{
 		Block:        "block",
@@ -108,6 +113,16 @@ Select which UTM status:
 }
 
 // --------------------------- Functions -----------------------------
+
+func getFilePath() (string, error) {
+	var err error = nil
+	path := os.Getenv(pathEnv)
+	if path == "" {
+		path = "../../assets/"
+		err = fmt.Errorf("path environment not set, using fallback relative path: %s", path)
+	}
+	return path, err
+}
 
 func initMapsFromtxt(txt []string) (map[int]FGGroup, map[int]FGCategory) {
 	// init maps
