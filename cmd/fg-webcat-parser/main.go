@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -12,8 +13,8 @@ import (
 )
 
 // --------------------------- Consts -----------------------------
-const filename string = "fg-category-list.txt"
-const pathEnv string = "GO_ASSETS"
+const fileIn string = "fg-webcat-parser/fg-category-list.txt"
+const assetsPathEnv string = "GO_ASSETS"
 
 // --------------------------- Structs -----------------------------
 type FGGroup struct {
@@ -40,11 +41,13 @@ type UTMAction struct {
 // --------------------------- Main -----------------------------
 func main() {
 	// init
-	filepath, err := getFilePath()
+	assetsPath, err := initEnv(assetsPathEnv)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(err, "\nExiting program...")
+		os.Exit(0)
 	}
-	txtContent := readTextFile(filepath + filename)
+	catListPath := filepath.Join(assetsPath, fileIn)
+	txtContent := readTextFile(catListPath)
 	fgGroupMap, fgCategoryMap := initMapsFromtxt(txtContent)
 	utm := UTMAction{
 		Block:        "block",
@@ -54,17 +57,15 @@ func main() {
 		Authenticate: "authenticate",
 	}
 
-	// start UI
-	fmt.Print(`
-------------------------------------------------------------
-Welcome to FG webcategory parser
-		
-Please enter the webfilter profile configuration and
-select the UTM status you want to the categories shown for
-------------------------------------------------------------
-`)
+	// Welcome message
+	fmt.Printf("------------------------------------------------------------------------------\n")
+	fmt.Printf("------------------------- FortiGate webfilter parser -------------------------\n")
+	fmt.Printf("------------------------------------------------------------------------------\n")
+	fmt.Printf("Program will take the configuration snippet of a FortiGate webfilter profile,\n")
+	fmt.Printf("parse it and return a view of the UTM status of available categories.\n")
+	fmt.Printf("------------------------------------------------------------------------------\n\n")
 
-	fmt.Println("Enter the configuration snippet and press enter.")
+	fmt.Println("Enter the configuration snippet and press Ctrl+D (or Ctrl+Z if using Windows).")
 
 	// Read and parse configuration from user input
 	confWebFilterProfile := readUserInput()
@@ -114,14 +115,13 @@ Select which UTM status:
 
 // --------------------------- Functions -----------------------------
 
-func getFilePath() (string, error) {
+func initEnv(envName string) (string, error) {
+	env := os.Getenv(envName)
 	var err error = nil
-	path := os.Getenv(pathEnv)
-	if path == "" {
-		path = "../../assets/"
-		err = fmt.Errorf("path environment not set, using fallback relative path: %s", path)
+	if env == "" {
+		err = fmt.Errorf("environment variable: \"%s\" is not set", envName)
 	}
-	return path, err
+	return env, err
 }
 
 func initMapsFromtxt(txt []string) (map[int]FGGroup, map[int]FGCategory) {
@@ -272,12 +272,10 @@ func readUserInput() []string {
 
 	var lines []string
 	for {
-		s.Scan()
-		l := s.Text()
-		if len(l) == 0 {
+		if !s.Scan() {
 			break
 		}
-		lines = append(lines, l)
+		lines = append(lines, s.Text())
 	}
 
 	err := s.Err()
